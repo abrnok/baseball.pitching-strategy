@@ -495,6 +495,10 @@ function selectResult(result){
 
     // カウント更新
     if(result==="ストライク") strikes++;
+    else if(result==="ファウル") {
+        // ファウルは2ストライク未満ならストライクを1つ加算
+        if(strikes < 2) strikes++;
+    }
     else if(result==="ボール") balls++;
 
     // 四球・死球を含む打席終了判定

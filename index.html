@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投手配球分析ツール</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
+    background:#f3f4f6;color:#111827;
+}
+button,select{font:inherit;touch-action:manipulation}
+button{cursor:pointer}
+.app{max-width:1500px;margin:0 auto;padding:12px}
+.header{
+    background:#111827;color:#fff;padding:15px 18px;border-radius:12px;
+    margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px
+}
+.header h1{margin:0;font-size:21px}
+.header p{margin:5px 0 0;font-size:13px;color:#d1d5db}
+.header-actions{display:flex;gap:7px;flex-wrap:wrap}
+.header-btn{
+    min-height:40px;padding:7px 12px;border:1px solid #4b5563;border-radius:8px;
+    background:#1f2937;color:#fff;font-weight:bold
+}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:12px;align-items:start}
+.card,.analysis-panel{
+    background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;
+    border:1px solid #e5e7eb
+}
+.section-title{font-size:15px;font-weight:bold;margin-bottom:10px}
+.current-batter{
+    display:grid;grid-template-columns:1fr 1fr 1.2fr 1.2fr;
+    gap:8px;text-align:center
+}
+.info-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px}
+.info-label{font-size:11px;color:#6b7280}
+.info-value{font-size:20px;font-weight:bold;margin-top:2px}
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.control label{display:block;font-size:11px;color:#6b7280;margin-bottom:4px}
+select{
+    width:100%;min-height:44px;border:1px solid #d1d5db;border-radius:8px;
+    padding:7px;background:#fff
+}
+.toggle-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.toggle{
+    min-height:46px;border:1px solid #d1d5db;border-radius:9px;background:#f3f4f6;
+    font-weight:bold
+}
+.toggle.selected{background:#2563eb;color:#fff;border-color:#2563eb}
+.status-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.status{
+    background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;
+    padding:7px 10px;font-size:12px
+}
+.button-grid{display:grid;gap:8px}
+.pitch-grid{grid-template-columns:repeat(3,1fr)}
+.result-grid{grid-template-columns:repeat(5,1fr)}
+button.big{
+    min-height:54px;border:0;border-radius:9px;background:#e5e7eb;
+    font-weight:bold;padding:8px
+}
+.pitch-button{background:#eef2ff!important;color:#1e3a8a}
+.pitch-button.selected{background:#2563eb!important;color:#fff}
+.result-strike{background:#dbeafe!important}
+.result-ball{background:#fef3c7!important}
+.result-foul{background:#e5e7eb!important}
+.result-hit{background:#dcfce7!important}
+.result-out{background:#fee2e2!important}
+.message{
+    background:#eff6ff;color:#1e40af;padding:10px;border-radius:8px;
+    text-align:center;margin-bottom:12px;font-size:13px
+}
+.sequence{display:flex;flex-direction:column;gap:7px}
+.sequence-item{
+    display:grid;grid-template-columns:55px 1fr 1fr;
+    align-items:center;background:#f9fafb;border:1px solid #e5e7eb;
+    border-radius:8px;padding:9px;font-size:13px
+}
+.sequence-result{text-align:right}
+.waiting{text-align:center;color:#6b7280;font-size:13px;padding:10px}
+.history-item{border-bottom:1px solid #e5e7eb;padding:10px 0}
+.history-item:last-child{border-bottom:0}
+.history-title{font-weight:bold;margin-bottom:4px}
+.history-pitches{font-size:12px;color:#4b5563;line-height:1.7}
+.reset-button{width:100%;min-height:50px;background:#374151;color:#fff;border:0;border-radius:9px;font-weight:bold}
+.analysis-panel{position:sticky;top:10px}
+.analysis-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.analysis-title{font-size:16px;font-weight:bold}
+.detail-button{
+    min-height:38px;border:1px solid #d1d5db;border-radius:8px;
+    background:#fff;padding:6px 10px;font-weight:bold
+}
+.analysis-sub{font-size:11px;color:#6b7280;margin:5px 0 12px}
+.metric-section{margin-top:13px}
+.metric-title{font-size:12px;font-weight:bold;margin-bottom:7px}
+.metric-row{display:grid;grid-template-columns:86px 1fr 48px;gap:5px;align-items:center;font-size:11px;margin:6px 0}
+.bar{height:8px;background:#edf0f3;border-radius:99px;overflow:hidden}
+.bar span{display:block;height:100%;background:#2563eb;border-radius:99px}
+.n{font-size:10px;color:#6b7280;margin-top:5px}
+.no-data{font-size:11px;color:#9ca3af;padding:6px 0}
+.more-button{
+    width:100%;min-height:44px;border:1px solid #2563eb;border-radius:8px;
+    background:#eff6ff;color:#1d4ed8;font-weight:bold;margin-top:12px
+}
+
+/* 詳細分析モーダル */
+.overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;
+    display:none;padding:16px
+}
+.overlay.open{display:block}
+.modal{
+    max-width:1150px;height:calc(100vh - 32px);margin:auto;background:#fff;
+    border-radius:14px;overflow:hidden;display:flex;flex-direction:column
+}
+.modal-head{
+    padding:13px 16px;border-bottom:1px solid #e5e7eb;
+    display:flex;justify-content:space-between;align-items:center
+}
+.close-btn{
+    min-height:38px;border:1px solid #d1d5db;border-radius:8px;
+    background:#fff;padding:6px 12px;font-weight:bold
+}
+.modal-body{padding:14px;overflow:auto}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.tab{
+    min-height:40px;padding:7px 12px;border:1px solid #d1d5db;
+    border-radius:8px;background:#fff;font-weight:bold
+}
+.tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.table-wrap{overflow:auto}
+.analysis-table{width:100%;border-collapse:collapse;font-size:12px;min-width:650px}
+.analysis-table th,.analysis-table td{
+    border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:top
+}
+.analysis-table th{background:#f9fafb}
+.analysis-note{font-size:11px;color:#6b7280;margin:5px 0 10px}
+.badge{
+    display:inline-block;background:#f3f4f6;border-radius:99px;
+    padding:3px 7px;font-size:10px;color:#4b5563
+}
+@media(max-width:1050px){
+    .layout{grid-template-columns:1fr}
+    .analysis-panel{position:static}
+}
+@media(max-width:700px){
+    .app{padding:8px}
+    .header{align-items:flex-start;flex-direction:column}
+    .header-actions{width:100%}
+    .header-btn{flex:1}
+    .current-batter{grid-template-columns:1fr 1fr}
+    .controls{grid-template-columns:1fr 1fr}
+    .pitch-grid{grid-template-columns:repeat(2,1fr)}
+    .result-grid{grid-template-columns:repeat(2,1fr)}
+    .overlay{padding:0}
+    .modal{height:100vh;border-radius:0}
+}
+
+.out-control-row{
+    flex-wrap:wrap;
+    gap:8px;
+}
+.out-control-row .detail-button{
+    min-width:44px;
+    min-height:40px;
+    padding:6px 10px;
+}
+.out-note{
+    font-size:12px;
+    color:#6b7280;
+    margin-bottom:10px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+<header class="header">
+    <div>
+        <h1>⚾ 投手配球分析ツール</h1>
+        <p>球種 → 判定の2タップで1球を記録。入力中も右側で配球傾向を確認できます。</p>
+    </div>
+    <div class="header-actions">
+        <button class="header-btn" onclick="openDetail()">📊 詳細分析</button>
+        <button class="header-btn" onclick="exportCSV()">CSV出力</button>
+    </div>
+</header>
+
+<div class="layout">
+<main>
+
+<section class="card">
+    <div class="section-title">試合状況</div>
+    <div class="controls">
+        <div class="control">
+            <label>イニング</label>
+            <select id="inning">
+                <option value="1">1回</option><option value="2">2回</option>
+                <option value="3">3回</option><option value="4">4回</option>
+                <option value="5">5回</option><option value="6">6回</option>
+                <option value="7">7回</option><option value="8">8回</option>
+                <option value="9">9回</option><option value="10">10回</option>
+                <option value="11">11回</option><option value="12">12回</option>
+            </select>
+        </div>
+        <div class="control">
+            <label>打順</label>
+            <select id="batterSelect">
+                <option value="1">1番</option><option value="2">2番</option>
+                <option value="3">3番</option><option value="4">4番</option>
+                <option value="5">5番</option><option value="6">6番</option>
+                <option value="7">7番</option><option value="8">8番</option>
+                <option value="9">9番</option><option value="10">10番</option>
+            </select>
+        </div>
+        <div class="control">
+            <label>走者状況</label>
+            <select id="runners">
+                <option value="なし">走者なし</option>
+                <option value="1塁">1塁</option><option value="2塁">2塁</option>
+                <option value="3塁">3塁</option><option value="1・2塁">1・2塁</option>
+                <option value="1・3塁">1・3塁</option><option value="2・3塁">2・3塁</option>
+                <option value="満塁">満塁</option>
+            </select>
+        </div>
+        <div class="control">
+            <label>打者左右</label>
+            <div class="toggle-grid">
+                <button id="rightHand" class="toggle selected" onclick="selectHand('右')">右</button>
+                <button id="leftHand" class="toggle" onclick="selectHand('左')">左</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-row">
+        <button id="leadBtn" class="toggle selected" onclick="toggleLead()">イニング先頭打者：ON</button>
+        <span class="status">アウト：<b id="outsDisplay">0</b></span>
+        <span class="status">走者：<b id="runnerDisplay">なし</b></span>
+    </div>
+
+    <div class="status-row out-control-row">
+        <span class="status">アウト数を手動修正</span>
+        <button class="detail-button" onclick="changeOuts(-1)">−1</button>
+        <button class="detail-button" onclick="setOuts(0)">0</button>
+        <button class="detail-button" onclick="setOuts(1)">1</button>
+        <button class="detail-button" onclick="setOuts(2)">2</button>
+        <button class="detail-button" onclick="changeOuts(1)">＋1</button>
+    </div>
+</section>
+
+<section class="card">
+    <div class="out-note">※ 盗塁アウト・牽制アウトなど、配球結果に残さないアウトが発生した場合に手動修正できます。</div>
+    <div class="current-batter">
+        <div class="info-box"><div class="info-label">打者</div><div id="batterNumber" class="info-value">1番</div></div>
+        <div class="info-box"><div class="info-label">打席</div><div id="batterHand" class="info-value">右</div></div>
+        <div class="info-box"><div class="info-label">現在の球数</div><div id="pitchCount" class="info-value">1球目</div></div>
+        <div class="info-box"><div class="info-label">カウント</div><div id="countDisplay" class="info-value">0-0</div></div>
+    </div>
+</section>
+
+<div id="message" class="message">球種を選択してください</div>
+
+<section class="card">
+    <div class="section-title">① 球種を選択</div>
+    <div id="pitchButtons" class="button-grid pitch-grid"></div>
+</section>
+
+<section class="card">
+    <div class="section-title">② 判定を選択</div>
+    <div id="resultButtons" class="button-grid result-grid"></div>
+    <div class="status-row">
+        <button id="undoButton" class="detail-button" onclick="undoLastPitch()">↩ 1球前に戻る</button>
+    </div>
+</section>
+
+<section class="card">
+    <div class="section-title">現在の打席の配球</div>
+    <div id="currentSequence" class="sequence"></div>
+</section>
+
+<section class="card">
+    <div class="section-title">打席履歴</div>
+    <div id="history"><div class="waiting">まだ打席はありません</div></div>
+</section>
+
+<section class="card">
+    <button class="reset-button" onclick="resetGame()">全データをリセット</button>
+</section>
+
+</main>
+
+<aside class="analysis-panel">
+    <div class="analysis-head">
+        <div class="analysis-title">📊 リアルタイム分析</div>
+        <button class="detail-button" onclick="openDetail()">詳細</button>
+    </div>
+    <div class="analysis-sub">配球入力を止めずに、現在の傾向を確認できます。</div>
+
+    <div class="metric-section">
+        <div class="metric-title">現在のカウント：<span id="analysisCount">0-0</span></div>
+        <div id="countAnalysis"></div>
+    </div>
+
+    <div class="metric-section">
+        <div class="metric-title">イニング先頭打者・初球</div>
+        <div id="leadAnalysis"></div>
+    </div>
+
+    <div class="metric-section">
+        <div class="metric-title">ピンチ時・初球</div>
+        <div id="pinchAnalysis"></div>
+    </div>
+
+    <div class="metric-section">
+        <div class="metric-title">右打者・全投球</div>
+        <div id="rightAnalysis"></div>
+    </div>
+
+    <div class="metric-section">
+        <div class="metric-title">左打者・全投球</div>
+        <div id="leftAnalysis"></div>
+    </div>
+
+    <button class="more-button" onclick="openDetail()">📈 全カウント・詳細分析を見る</button>
+</aside>
+</div>
+</div>
+
+<div id="overlay" class="overlay" onclick="overlayClose(event)">
+    <div class="modal">
+        <div class="modal-head">
+            <strong>📊 詳細分析ダッシュボード</strong>
+            <button class="close-btn" onclick="closeDetail()">閉じる</button>
+        </div>
+        <div class="modal-body">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('count',this)">カウント別</button>
+                <button class="tab" onclick="showTab('first',this)">初球分析</button>
+                <button class="tab" onclick="showTab('hand',this)">左右打者</button>
+                <button class="tab" onclick="showTab('situation',this)">状況別</button>
+                <button class="tab" onclick="showTab('sequence',this)">球種連続</button>
+            </div>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const pitchTypes=[
+    "ストレート","カーブ","スライダー","カット","ツーシーム",
+    "シュート","フォーク","チェンジアップ","シンカー"
+];
+const results=["ストライク","ボール","ファウル","ヒット","2塁打","3塁打","本塁打","四球","死球","エラー","アウト","ダブルプレー","トリプルプレー"];
+
+let currentBatter=1;
+let currentHand="右";
+let currentBall=1;
+let balls=0;
+let strikes=0;
+let selectedPitch=null;
+let currentAtBat=[];
+let history=JSON.parse(localStorage.getItem("pitchHistory")||"[]");
+let allPitches=JSON.parse(localStorage.getItem("pitchAllPitches")||"[]");
+let leadOff=true;
+let pinch=false;
+let outs=0;
+let runnerState={first:false,second:false,third:false};
+let pitchSnapshots=[]; // 1球戻るための状態履歴
+let lastAutomaticRunnerState=null;
+
+function $(id){return document.getElementById(id)}
+
+function initialize(){
+    createPitchButtons();
+    createResultButtons();
+    $("batterSelect").value=currentBatter;
+    $("inning").addEventListener("change",function(){
+        leadOff=true;
+        updateToggles();
+        updateAll();
+    });
+    $("batterSelect").addEventListener("change",function(){
+        currentBatter=Number(this.value);
+        updateAll();
+    });
+    $("runners").addEventListener("change",function(){
+        runnerState=runnerStateFromLabel(this.value);
+        lastAutomaticRunnerState=null;
+        updateAll();
+    });
+    updateAll();
+}
+
+function createPitchButtons(){
+    const box=$("pitchButtons"); box.innerHTML="";
+    pitchTypes.forEach(p=>{
+        const b=document.createElement("button");
+        b.textContent=p;b.className="big pitch-button";
+        b.onclick=()=>selectPitch(p,b);
+        box.appendChild(b);
+    });
+}
+
+function createResultButtons(){
+    const box=$("resultButtons");box.innerHTML="";
+    results.forEach(r=>{
+        const b=document.createElement("button");
+        b.textContent=r;b.className="big";
+        b.classList.add({
+            "ストライク":"result-strike","ボール":"result-ball",
+            "ファウル":"result-foul","ヒット":"result-hit","アウト":"result-out",
+            "2塁打":"result-hit","3塁打":"result-hit","本塁打":"result-hit",
+            "四球":"result-ball","死球":"result-ball","エラー":"result-hit",
+            "ダブルプレー":"result-out","トリプルプレー":"result-out"
+        }[r]);
+        b.onclick=()=>selectResult(r);
+        box.appendChild(b);
+    });
+}
+
+function selectHand(hand){
+    currentHand=hand;
+    updateAll();
+}
+
+function toggleLead(){
+    leadOff=!leadOff;
+    updateToggles();updateAll();
+}
+
+function updateToggles(){
+    $("rightHand").classList.toggle("selected",currentHand==="右");
+    $("leftHand").classList.toggle("selected",currentHand==="左");
+    $("leadBtn").classList.toggle("selected",leadOff);
+    $("leadBtn").textContent="イニング先頭打者："+(leadOff?"ON":"OFF");
+}
+
+function selectPitch(pitch,button){
+    selectedPitch=pitch;
+    document.querySelectorAll(".pitch-button").forEach(b=>b.classList.remove("selected"));
+    button.classList.add("selected");
+    $("message").textContent=pitch+"を選択しました。判定を選択してください。";
+}
+
+function selectResult(result){
+    if(selectedPitch===null){
+        $("message").textContent="先に球種を選択してください。";
+        return;
+    }
+
+    // 1球戻るため、投球前の状態を保存
+    pitchSnapshots.push({
+        currentBatter,
+        currentHand,
+        currentBall,
+        balls,
+        strikes,
+        selectedPitch,
+        currentAtBat:JSON.parse(JSON.stringify(currentAtBat)),
+        history:JSON.parse(JSON.stringify(history)),
+        allPitches:JSON.parse(JSON.stringify(allPitches)),
+        leadOff,
+        pinch,
+        outs,
+        runnerState:JSON.parse(JSON.stringify(runnerState)),
+        inning:Number($("inning").value)
+    });
+
+    const preBalls=balls,preStrikes=strikes;
+    const inning=Number($("inning").value);
+    const runnersBefore=runnerLabelFromState(runnerState);
+
+    const pitchData={
+        inning:inning,
+        batter:currentBatter,
+        hand:currentHand,
+        ballNumber:currentBall,
+        balls:preBalls,
+        strikes:preStrikes,
+        count:preBalls+"-"+preStrikes,
+        leadOff:leadOff,
+        pinch:isPinchSituation(runnerState),
+        runners:runnersBefore,
+        runnersAfter:null,
+        pitch:selectedPitch,
+        result:result
+    };
+
+    currentAtBat.push(pitchData);
+    allPitches.push(pitchData);
+
+    // カウント更新
+    if(result==="ストライク") strikes++;
+    else if(result==="ボール") balls++;
+
+    // 四球・死球を含む打席終了判定
+    let finished=false;
+    if(
+        strikes>=3 ||
+        balls>=4 ||
+        ["ヒット","2塁打","3塁打","本塁打","四球","死球","エラー","アウト","ダブルプレー","トリプルプレー"].includes(result)
+    ) finished=true;
+
+    // 四球4つは自動的に「四球」として確定
+    if(balls>=4){
+        result="四球";
+        pitchData.result="四球";
+        finished=true;
+    }
+
+    if(finished){
+        finishAtBat(result);
+        return;
+    }
+
+    currentBall++;
+    selectedPitch=null;
+    clearPitchSelection();
+    saveData();
+    $("message").textContent="次の球：球種を選択してください。";
+    updateAll();
+}
+function finishAtBat(finalResult){
+    // 打席終了時の走者状況を結果から自動更新
+    const beforeState=JSON.parse(JSON.stringify(runnerState));
+    const afterState=advanceRunners(beforeState,finalResult);
+
+    // ピンチ判定は「投球前の走者状況」を基準に自動判定
+    pinch=isPinchSituation(beforeState);
+
+    if(currentAtBat.length){
+        const lastPitch=currentAtBat[currentAtBat.length-1];
+        lastPitch.pinch=pinch;
+        lastPitch.runnersAfter=runnerLabelFromState(afterState);
+    }
+
+    // ヒット系・エラー・四死球後の走者状況を保存
+    history.push({
+        inning:Number($("inning").value),
+        batter:currentBatter,
+        hand:currentHand,
+        leadOff:leadOff,
+        pinch:pinch,
+        runners:runnerLabelFromState(beforeState),
+        runnersAfter:runnerLabelFromState(afterState),
+        pitches:[...currentAtBat],
+        finalResult:finalResult
+    });
+
+    // アウト数を結果に応じて加算
+    if(finalResult==="アウト") outs++;
+    if(finalResult==="ダブルプレー") outs+=2;
+    if(finalResult==="トリプルプレー") outs+=3;
+
+    runnerState=afterState;
+
+    let inningChanged=false;
+    if(outs>=3){
+        outs=0;
+        // 3アウトでチェンジ。次イニング開始時は塁上をリセット。
+        runnerState={first:false,second:false,third:false};
+        const currentInning=Number($("inning").value);
+        if(currentInning<12){
+            $("inning").value=String(currentInning+1);
+        }
+        inningChanged=true;
+        leadOff=true;
+    }
+
+    // 次打者へ
+    currentBatter++;
+    if(currentBatter>10)currentBatter=1;
+    $("batterSelect").value=currentBatter;
+
+    currentBall=1;
+    balls=0;
+    strikes=0;
+    selectedPitch=null;
+    currentAtBat=[];
+    pinch=isPinchSituation(runnerState);
+
+    clearPitchSelection();
+    syncRunnerSelect();
+    saveData();
+    updateAll();
+
+    if(inningChanged){
+        $("message").textContent=
+            $("inning").value+"回に入りました。"+currentBatter+"番打者の1球目です。";
+    }else{
+        $("message").textContent=
+            currentBatter+"番打者の1球目です。走者状況を自動更新しました。";
+    }
+}
+function clearPitchSelection(){
+    document.querySelectorAll(".pitch-button").forEach(b=>b.classList.remove("selected"));
+}
+
+function saveData(){
+    localStorage.setItem("pitchHistory",JSON.stringify(history));
+    localStorage.setItem("pitchAllPitches",JSON.stringify(allPitches));
+}
+
+function updateAll(){
+    // 現在の走者状況からピンチを自動判定
+    pinch=isPinchSituation(runnerState);
+    syncRunnerSelect();
+
+    updateToggles();
+    $("batterNumber").textContent=currentBatter+"番";
+    $("batterHand").textContent=currentHand;
+    $("pitchCount").textContent=currentBall+"球目　B"+balls+" S"+strikes;
+    $("countDisplay").textContent=balls+"-"+strikes;
+    $("analysisCount").textContent=balls+"-"+strikes;
+    $("outsDisplay").textContent=outs;
+    $("runnerDisplay").textContent=runnerLabelFromState(runnerState);
+    updateSequence();
+    updateHistory();
+    updateRealtimeAnalysis();
+}
+
+
+function runnerStateFromLabel(label){
+    return {
+        first:["1塁","1・2塁","1・3塁","満塁"].includes(label),
+        second:["2塁","1・2塁","2・3塁","満塁"].includes(label),
+        third:["3塁","1・3塁","2・3塁","満塁"].includes(label)
+    };
+}
+
+function runnerLabelFromState(s){
+    if(s.first&&s.second&&s.third)return "満塁";
+    if(s.first&&s.second)return "1・2塁";
+    if(s.first&&s.third)return "1・3塁";
+    if(s.second&&s.third)return "2・3塁";
+    if(s.first)return "1塁";
+    if(s.second)return "2塁";
+    if(s.third)return "3塁";
+    return "なし";
+}
+
+// ピンチ = 2塁または3塁に走者がいる状態
+function isPinchSituation(s){
+    return !!(s.second||s.third);
+}
+
+function syncRunnerSelect(){
+    $("runners").value=runnerLabelFromState(runnerState);
+}
+
+// 打席結果による走者進塁。
+// 単打・エラーは1つ、2塁打は2つ、3塁打は3つ、HRは全員生還。
+// 四球・死球はフォースされる走者だけ進塁。
+function advanceRunners(before,result){
+    const out={first:false,second:false,third:false};
+
+    // 本塁打：走者・打者とも生還して塁上は空になる
+    if(result==="本塁打") return out;
+
+    // 単打・エラー：このツールの既定値は1つ進塁。必要なら手動修正可能。
+    if(result==="ヒット"||result==="エラー"){
+        if(before.third) { /* 本塁生還 */ }
+        if(before.second) out.third=true;
+        if(before.first) out.second=true;
+        out.first=true;
+        return out;
+    }
+
+    // 2塁打：既存走者は2つ進塁する既定値。3塁打：既存走者は生還。
+    if(result==="2塁打"){
+        if(before.third) { /* 本塁生還 */ }
+        if(before.second) { /* 本塁生還 */ }
+        if(before.first) out.third=true;
+        out.second=true;
+        return out;
+    }
+
+    if(result==="3塁打"){
+        out.third=true;
+        return out;
+    }
+
+    // 四球・死球：強制進塁される走者だけを押し出す。
+    // 例）1・2塁→満塁、1・3塁→満塁、2・3塁→満塁、2塁→1・2塁。
+    if(result==="四球"||result==="死球"){
+        if(before.first){
+            // 1塁走者が押し出されて2塁へ
+            out.second=true;
+            if(before.second){
+                // 2塁走者も押し出されて3塁へ
+                out.third=true;
+            }
+        }
+        // 3塁走者は、1・2塁が埋まっている場合だけ押し出される。
+        else if(before.second){
+            out.second=true;
+        }
+        if(before.third) out.third=true;
+        out.first=true;
+        return out;
+    }
+
+    // ダブルプレー／トリプルプレーはプレー内容によって残塁が変わるため、
+    // 走者状況は自動変更せず、アウト数だけfinishAtBat()で加算する。
+    return {...before};
+}
+
+function changeOuts(delta){
+    const next=outs+delta;
+    if(next<0) return;
+    if(next>=3){
+        startNextInning();
+        return;
+    }
+    outs=next;
+    pitchSnapshots=[];
+    saveData();
+    updateAll();
+    $("message").textContent="アウト数を"+outs+"に修正しました。";
+}
+
+function setOuts(value){
+    if(value>=3){
+        startNextInning();
+        return;
+    }
+    outs=value;
+    pitchSnapshots=[];
+    saveData();
+    updateAll();
+    $("message").textContent="アウト数を"+outs+"に修正しました。";
+}
+
+function startNextInning(){
+    outs=0;
+    runnerState={first:false,second:false,third:false};
+    const currentInning=Number($("inning").value);
+    if(currentInning<12) $("inning").value=String(currentInning+1);
+    leadOff=true;
+    // 手動アウト修正は「1球戻る」の対象にしない。
+    pitchSnapshots=[];
+    saveData();
+    updateAll();
+    $("message").textContent=$("inning").value+"回に入りました。アウト数を0、走者なしにしました。";
+}
+
+function undoLastPitch(){
+    if(!pitchSnapshots.length){
+        $("message").textContent="戻せる投球がありません。";
+        return;
+    }
+
+    const snap=pitchSnapshots.pop();
+
+    currentBatter=snap.currentBatter;
+    currentHand=snap.currentHand;
+    currentBall=snap.currentBall;
+    balls=snap.balls;
+    strikes=snap.strikes;
+    selectedPitch=snap.selectedPitch;
+    currentAtBat=snap.currentAtBat;
+    history=snap.history;
+    allPitches=snap.allPitches;
+    leadOff=snap.leadOff;
+    pinch=snap.pinch;
+    outs=snap.outs;
+    runnerState=snap.runnerState;
+    $("inning").value=String(snap.inning);
+    $("batterSelect").value=currentBatter;
+
+    clearPitchSelection();
+
+    // 戻した球が選択状態だった場合だけ再選択表示
+    if(selectedPitch){
+        document.querySelectorAll(".pitch-button").forEach(b=>{
+            if(b.textContent===selectedPitch)b.classList.add("selected");
+        });
+    }
+
+    saveData();
+    updateAll();
+    $("message").textContent="1球前の状態に戻しました。";
+}
+
+function updateSequence(){
+    const box=$("currentSequence");box.innerHTML="";
+    if(!currentAtBat.length){
+        box.innerHTML='<div class="waiting">まだ投球されていません</div>';return;
+    }
+    currentAtBat.forEach(p=>{
+        const item=document.createElement("div");
+        item.className="sequence-item";
+        item.innerHTML=
+            "<div><b>"+p.ballNumber+"球目</b><br><small>"+p.count+"</small></div>"+
+            "<div>"+p.pitch+"</div>"+
+            '<div class="sequence-result">'+p.result+"</div>";
+        box.appendChild(item);
+    });
+}
+
+function updateHistory(){
+    const box=$("history");box.innerHTML="";
+    if(!history.length){
+        box.innerHTML='<div class="waiting">まだ打席はありません</div>';return;
+    }
+    [...history].reverse().forEach(atBat=>{
+        const item=document.createElement("div");
+        item.className="history-item";
+        let pitchText="";
+        atBat.pitches.forEach(p=>{
+            pitchText+=p.ballNumber+"球目 "+p.pitch+" / "+p.result+"<br>";
+        });
+        item.innerHTML=
+            '<div class="history-title">'+atBat.inning+"回 "+atBat.batter+"番・"+atBat.hand+"打席"+
+            (atBat.leadOff?"・先頭":"")+(atBat.pinch?"・ピンチ":"")+
+            "・走者："+atBat.runners+" → "+(atBat.runnersAfter||atBat.runners)+"</div>"+
+            '<div class="history-pitches">'+pitchText+"</div>";
+        box.appendChild(item);
+    });
+}
+
+function getStats(filter){
+    const data=allPitches.filter(filter);
+    const counts={};
+    pitchTypes.forEach(p=>counts[p]=0);
+    data.forEach(x=>{counts[x.pitch]=(counts[x.pitch]||0)+1});
+    return {total:data.length,counts:counts};
+}
+
+function statsHTML(stats){
+    if(!stats.total)return '<div class="no-data">データなし</div>';
+    const rows=pitchTypes
+        .filter(p=>stats.counts[p]>0)
+        .sort((a,b)=>stats.counts[b]-stats.counts[a]);
+    let html="";
+    rows.forEach(p=>{
+        const pct=stats.counts[p]/stats.total*100;
+        html+='<div class="metric-row"><span>'+p+
+            '</span><div class="bar"><span style="width:'+pct+'%"></span></div>'+
+            "<strong>"+pct.toFixed(1)+"%</strong></div>";
+    });
+    html+='<div class="n">N='+stats.total+"球</div>";
+    return html;
+}
+
+function updateRealtimeAnalysis(){
+    const count=balls+"-"+strikes;
+    $("countAnalysis").innerHTML=statsHTML(getStats(x=>x.count===count));
+    $("leadAnalysis").innerHTML=statsHTML(getStats(x=>x.leadOff&&x.ballNumber===1));
+    $("pinchAnalysis").innerHTML=statsHTML(getStats(x=>x.pinch&&x.ballNumber===1));
+    $("rightAnalysis").innerHTML=statsHTML(getStats(x=>x.hand==="右"));
+    $("leftAnalysis").innerHTML=statsHTML(getStats(x=>x.hand==="左"));
+}
+
+/* 詳細分析 */
+function openDetail(){
+    $("overlay").classList.add("open");
+    showTab("count",document.querySelector(".tab"));
+}
+function closeDetail(){$("overlay").classList.remove("open")}
+function overlayClose(e){if(e.target===$("overlay"))closeDetail()}
+
+function showTab(tab,button){
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    if(button)button.classList.add("active");
+
+    if(tab==="count")renderCountTable();
+    if(tab==="first")renderFirstTable();
+    if(tab==="hand")renderHandTable();
+    if(tab==="situation")renderSituationTable();
+    if(tab==="sequence")renderSequenceTable();
+}
+
+function tableStats(filter){
+    return getStats(filter);
+}
+
+function statsCells(stats){
+    return pitchTypes.map(p=>{
+        const pct=stats.total?stats.counts[p]/stats.total*100:0;
+        return "<td>"+(stats.total?pct.toFixed(1)+"%":"-")+"</td>";
+    }).join("");
+}
+
+function renderCountTable(){
+    let html='<div class="analysis-note">各球の「投球前カウント」を基準に集計しています。Nはそのカウントで投じた球数です。</div>';
+    html+='<div class="table-wrap"><table class="analysis-table"><thead><tr><th>カウント</th><th>N</th>';
+    pitchTypes.forEach(p=>html+="<th>"+p+"</th>");
+    html+="</tr></thead><tbody>";
+    for(let b=0;b<=3;b++){
+        for(let s=0;s<=2;s++){
+            const count=b+"-"+s;
+            const st=tableStats(x=>x.count===count);
+            html+="<tr><td><b>"+count+"</b></td><td>"+st.total+"</td>"+statsCells(st)+"</tr>";
+        }
+    }
+    html+="</tbody></table></div>";
+    $("detailContent").innerHTML=html;
+}
+
+function renderFirstTable(){
+    const groups=[
+        ["イニング先頭打者の初球",x=>x.leadOff&&x.ballNumber===1],
+        ["ピンチ時の初球",x=>x.pinch&&x.ballNumber===1],
+        ["全打者の初球",x=>x.ballNumber===1],
+        ["右打者の初球",x=>x.hand==="右"&&x.ballNumber===1],
+        ["左打者の初球",x=>x.hand==="左"&&x.ballNumber===1]
+    ];
+    renderGroupTable(groups,"初球の球種割合");
+}
+
+function renderHandTable(){
+    const groups=[
+        ["右打者・全投球",x=>x.hand==="右"],
+        ["左打者・全投球",x=>x.hand==="左"],
+        ["右打者・初球",x=>x.hand==="右"&&x.ballNumber===1],
+        ["左打者・初球",x=>x.hand==="左"&&x.ballNumber===1]
+    ];
+    renderGroupTable(groups,"左右打者別の球種割合");
+}
+
+function renderSituationTable(){
+    const groups=[
+        ["走者なし",x=>x.runners==="なし"],
+        ["1塁",x=>x.runners==="1塁"],
+        ["2塁",x=>x.runners==="2塁"],
+        ["3塁",x=>x.runners==="3塁"],
+        ["1・2塁",x=>x.runners==="1・2塁"],
+        ["1・3塁",x=>x.runners==="1・3塁"],
+        ["2・3塁",x=>x.runners==="2・3塁"],
+        ["満塁",x=>x.runners==="満塁"],
+        ["ピンチ",x=>x.pinch]
+    ];
+    renderGroupTable(groups,"走者・状況別の球種割合");
+}
+
+function renderGroupTable(groups,title){
+    let html='<div class="analysis-note">'+title+"。各行のNは該当した投球数です。</div>";
+    html+='<div class="table-wrap"><table class="analysis-table"><thead><tr><th>条件</th><th>N</th>';
+    pitchTypes.forEach(p=>html+="<th>"+p+"</th>");
+    html+="</tr></thead><tbody>";
+    groups.forEach(g=>{
+        const st=getStats(g[1]);
+        html+="<tr><td><b>"+g[0]+"</b></td><td>"+st.total+"</td>"+statsCells(st)+"</tr>";
+    });
+    html+="</tbody></table></div>";
+    $("detailContent").innerHTML=html;
+}
+
+function renderSequenceTable(){
+    const transitions={};
+    allPitches.forEach(p=>{
+        if(p.ballNumber<=1)return;
+        const atBat=history.find(h=>h.pitches.some(q=>q===p));
+        if(!atBat)return;
+    });
+
+    const pairs={};
+    history.forEach(h=>{
+        for(let i=1;i<h.pitches.length;i++){
+            const prev=h.pitches[i-1].pitch;
+            const next=h.pitches[i].pitch;
+            const key=prev+" → "+next;
+            pairs[key]=(pairs[key]||0)+1;
+        }
+    });
+    const sorted=Object.entries(pairs).sort((a,b)=>b[1]-a[1]);
+    let html='<div class="analysis-note">同一打席内で「前の球種 → 次の球種」が何回発生したかを集計します。</div>';
+    if(!sorted.length){
+        html+='<div class="waiting">2球以上入力された打席がまだありません。</div>';
+    }else{
+        html+='<div class="table-wrap"><table class="analysis-table"><thead><tr><th>球種遷移</th><th>回数</th></tr></thead><tbody>';
+        sorted.slice(0,50).forEach(x=>{
+            html+="<tr><td>"+x[0]+"</td><td>"+x[1]+"回</td></tr>";
+        });
+        html+="</tbody></table></div>";
+    }
+    $("detailContent").innerHTML=html;
+}
+
+function exportCSV(){
+    if(!allPitches.length){
+        alert("出力できるデータがありません。");return;
+    }
+    const headers=["イニング","打順","打者左右","球数","投球前ボール","投球前ストライク","投球前カウント","先頭打者","ピンチ","投球前走者","投球後走者","球種","結果"];
+    const rows=allPitches.map(p=>[
+        p.inning,p.batter,p.hand,p.ballNumber,p.balls,p.strikes,p.count,
+        p.leadOff?"○":"",""+(p.pinch?"○":""),p.runners,p.runnersAfter||"",p.pitch,p.result
+    ]);
+    const csv=[headers,...rows].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="pitch_analysis_"+new Date().toISOString().slice(0,10)+".csv";
+    a.click();URL.revokeObjectURL(url);
+}
+
+function resetGame(){
+    if(!confirm("すべての配球データを削除します。よろしいですか？"))return;
+    currentBatter=1;currentHand="右";currentBall=1;balls=0;strikes=0;
+    selectedPitch=null;currentAtBat=[];history=[];allPitches=[];leadOff=true;pinch=false;
+    outs=0;runnerState={first:false,second:false,third:false};pitchSnapshots=[];
+    $("inning").value="1";
+    $("batterSelect").value="1";
+    clearPitchSelection();saveData();updateAll();
+    $("message").textContent="データをリセットしました。";
+}
+
+initialize();
+</script>
+</body>
+</html>
